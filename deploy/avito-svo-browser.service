@@ -1,0 +1,17 @@
+[Unit]
+Description=Avito resident browser daemon (always-open Avito tab)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:1
+Environment=TZ=Europe/Moscow
+Environment=HOME=/root
+WorkingDirectory=/root/avito-svo
+ExecStart=/usr/local/lib/python3.12/dist-packages/playwright/driver/node /root/avito-svo/ff_browser_daemon.js
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target

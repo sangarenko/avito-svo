@@ -1,0 +1,2 @@
+# приоритеты OOM: сбор важнее посторонних браузеров
+* * * * * root /root/avito-svo/oom_priority.sh >/dev/null 2>&1

@@ -1,0 +1,19 @@
+[Unit]
+Description=Avito SVO TG bot (поиск «сво по контракту», тихий сбор 07-11, отчёт-эксель в 12:00)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/avito-svo
+ExecStart=/usr/bin/python3 /root/avito-svo/tg_bot.py
+Environment=DISPLAY=:1
+# лимит телефонов за один прогон (колонка «Телефон» экселя;
+# вернуть старый: AVITO_MAX_PHONES=5)
+Environment=AVITO_MAX_PHONES=20
+# AVITO_COMPANY_COL=1 - включить 4-ю колонку «Вакансий компании»
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
