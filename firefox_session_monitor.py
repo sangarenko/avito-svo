@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""firefox_session_monitor.py — авто-экспорт сессии Авито из реального Firefox.
+"""firefox_session_monitor.py - авто-экспорт сессии Авито из реального Firefox.
 
 Контекст: владелец логинится на Авито руками в антидетект-Firefox
-(/root/.mozilla/firefox/ai-agent — настоящий Firefox без протоколов
+(/root/.mozilla/firefox/ai-agent - настоящий Firefox без протоколов
 автоматизации, Win10-spoof через user.js, весь трафик через SOCKS5
 127.0.0.1:10808). Парсер же ждёт сессию в avito_session.json в формате
 playwright storage_state.
 
 Скрипт каждые 15 секунд снимает копию cookies.sqlite профиля (Firefox
-держит её залоченной — читаем копию), ищет куки логина Авито и при их
+держит её залоченной - читаем копию), ищет куки логина Авито и при их
 появлении экспортирует ВСЕ avito-куки в avito_session.json + пишет
 login_state.json. Браузер не трогает, в ТГ не пишет, ничего не убивает.
 
@@ -72,7 +72,7 @@ def snapshot_cookies() -> bool:
         except FileNotFoundError:
             pass
         except Exception:
-            ok = False  # середина записи Firefox — снимем на следующем такте
+            ok = False  # середина записи Firefox - снимем на следующем такте
     return ok
 
 
@@ -94,9 +94,9 @@ def is_logged_in(rows) -> bool:
 
 
 def rows_hash(rows) -> str:
-    """Хеш набора кук (имя+значение+срок) — детект ротации сессии.
+    """Хеш набора кук (имя+значение+срок) - детект ротации сессии.
 
-    Пока куки в реальном Firefox не меняются — файл сессии НЕ трогаем:
+    Пока куки в реальном Firefox не меняются - файл сессии НЕ трогаем:
     его мог обновить ff_collect более свежей ротацией (парсер тоже
     живёт с этой сессией). Экспортируем только реальное изменение.
     """
@@ -173,7 +173,7 @@ def main() -> int:
                 continue
             if logged and announced and h != last_hash:
                 # куки в реальном Firefox реально изменились (ротация
-                # при живом браузере) — экспортируем свежие; без
+                # при живом браузере) - экспортируем свежие; без
                 # изменений файл не трогаем (его обновляет и ff_collect)
                 n = export_session(rows)
                 write_login_state(True, n)
@@ -183,12 +183,12 @@ def main() -> int:
             if not logged and announced and not logged_off:
                 logged_off = True
                 write_login_state(False)
-                log("куки логина пропали (выход?) — сессия осталась в файле, "
+                log("куки логина пропали (выход?) - сессия осталась в файле, "
                     "но login_state=False")
             if not announced and not logged_off:
                 write_login_state(False, len(rows))
         except sqlite3.DatabaseError as e:
-            # кривой снимок (Firefox писал в момент копирования) — пропускаем
+            # кривой снимок (Firefox писал в момент копирования) - пропускаем
             log("снимок не читается (%s), пропускаю такт" % e)
         except Exception as e:
             log("ошибка такта: %s" % e)
@@ -196,11 +196,11 @@ def main() -> int:
         if not firefox_running():
             if not ff_closed_noted:
                 ff_closed_noted = True
-                log("Firefox закрыт — продолжаю следить (жду следующий вход)")
+                log("Firefox закрыт - продолжаю следить (жду следующий вход)")
         else:
             ff_closed_noted = False
 
-    log("дедлайн (%d ч) — выхожу, сессия остаётся в файле" % (HOLD_S // 3600))
+    log("дедлайн (%d ч) - выхожу, сессия остаётся в файле" % (HOLD_S // 3600))
     return 0
 
 

@@ -1,19 +1,19 @@
 #!/usr/bin/env node
-/* ff_browser_daemon.js — резидентный браузер Авито.
+/* ff_browser_daemon.js - резидентный браузер Авито.
  *
- * Браузер живёт ПОСТОЯННО (systemd avito-svo-browser, DISPLAY=:1 —
+ * Браузер живёт ПОСТОЯННО (systemd avito-svo-browser, DISPLAY=:1 -
  * вкладку видно в noVNC) с открытой вкладкой поиска «сво по
  * контракту». Прогоны ff_collect подключаются к этому браузеру
  * (resident_endpoint() читает browser.ws) и закрывают только свои
- * вкладки — сам браузер и вкладка-демон живут дальше. Постоянно
- * открытый браузер вместо «новый Firefox на каждый прогон» —
+ * вкладки - сам браузер и вкладка-демон живут дальше. Постоянно
+ * открытый браузер вместо «новый Firefox на каждый прогон» -
  * меньше блокировок «Доступ ограничен» и капч со стороны Авито.
  *
  * Что делает демон:
  *   - launchServer (порт 9334, прокси socks5 Москва, антидетект-префы),
  *     ws-эндпоинт -> browser.ws, heartbeat -> browser.heartbeat (45 c);
  *   - вкладка-«печка»: поиск Авито, лёгкий скролл ~5 мин, мягкий
- *     reload ~20 мин (пока не идёт сбор — pgrep ff_collect),
+ *     reload ~20 мин (пока не идёт сбор - pgrep ff_collect),
  *     попапы «Хорошо/Понятно/Принять/Всё верно» закрываются;
  *   - куки логина из avito_session.json при старте + при изменении
  *     файла (свежий логин подхватывается без рестарта);
@@ -81,13 +81,13 @@ function touch(file, data) {
 
 function crawlActive() {
   /* идёт ли сейчас прогон ff_collect (демон в это время вкладку
-     не трогает — рулит прогон). pgrep себя не матчит. */
+     не трогает - рулит прогон). pgrep себя не матчит. */
   try {
     const out = child.execSync("pgrep -f 'ff_collec[t]\\.py'",
                                { encoding: 'utf8', timeout: 5000 });
     return out.trim().length > 0;
   } catch (e) {
-    return false;  // rc=1 — процессов нет
+    return false;  // rc=1 - процессов нет
   }
 }
 
@@ -141,7 +141,7 @@ async function dismissPopups(page) {
           return;
         }
       }
-    } catch (e) { /* нет попапа — норм */ }
+    } catch (e) { /* нет попапа - норм */ }
   }
 }
 
@@ -184,16 +184,16 @@ async function createContext() {
   sessionLoadedAt = Date.now();
   page = await ctx.newPage();
   if (!(await gotoSafe(page, HOME_URL))) {
-    log('!!! главная Авито не открылась — ещё попытка позже (tick)');
+    log('!!! главная Авито не открылась - ещё попытка позже (tick)');
   }
   if (!(await gotoSafe(page, SEARCH_URL))) {
-    log('!!! поиск не открылся — вкладка на ' + (page.url() || '?'));
+    log('!!! поиск не открылся - вкладка на ' + (page.url() || '?'));
   }
   await dismissPopups(page);
   let title = '';
   try { title = await page.title(); } catch (e) {}
   log('вкладка Авито открыта: ' + (page.url() || '?').slice(0, 90)
-      + ' · title=' + title.slice(0, 60));
+      + ' | title=' + title.slice(0, 60));
 }
 
 async function saveSession(why) {
@@ -219,7 +219,7 @@ async function tick() {
     }
   } catch (e) {}
   if (!alive) {
-    log('вкладка/контекст умерли — пересоздаю');
+    log('вкладка/контекст умерли - пересоздаю');
     try { if (ctx) await ctx.close(); } catch (e) {}
     await createContext();
     lastReload = lastScroll = lastSave = Date.now();
@@ -239,7 +239,7 @@ async function tick() {
   } catch (e) {}
 
   if (!active) {
-    /* лёгкий скролл ~раз в 5 мин — вкладка «живая» */
+    /* лёгкий скролл ~раз в 5 мин - вкладка «живая» */
     if (now - lastScroll > 5 * 60 * 1000) {
       try {
         await page.evaluate('window.scrollBy(0, 600)');
@@ -277,7 +277,7 @@ async function tick() {
   const d = new Date();
   const dayKey = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
   if (d.getHours() === 4 && d.getMinutes() >= 25 && lastRecycleDay !== dayKey) {
-    log('04:30 МСК — пересоздаю контекст (гигиена памяти, браузер живёт)');
+    log('04:30 МСК - пересоздаю контекст (гигиена памяти, браузер живёт)');
     try { if (ctx) await ctx.close(); } catch (e) {}
     await createContext();
     lastRecycleDay = dayKey;
@@ -289,14 +289,14 @@ async function main() {
   log('старт: жду прокси ' + PROXY);
   for (let i = 0; i < 30; i++) {
     if (await proxyReady()) break;
-    log('прокси недоступен, попытка ' + (i + 1) + '/30 — жду 10 c');
+    log('прокси недоступен, попытка ' + (i + 1) + '/30 - жду 10 c');
     await new Promise((r) => setTimeout(r, 10000));
     if (i === 29) {
-      log('!!! прокси так и не поднялся — выхожу (systemd перезапустит)');
+      log('!!! прокси так и не поднялся - выхожу (systemd перезапустит)');
       process.exit(1);
     }
   }
-  log('прокси ок — поднимаю резидентный браузер (порт ' + PORT + ')');
+  log('прокси ок - поднимаю резидентный браузер (порт ' + PORT + ')');
   try {
     srv = await firefox.launchServer({
       headless: false,
@@ -327,11 +327,11 @@ async function main() {
       } catch (e) {
         log('tick: ' + String(e.message || e).slice(0, 150));
         /* фатально? проверим на следующем такте (вкладка пересоздастся),
-           а если умер сам сервер — выходим, systemd поднимет заново */
+           а если умер сам сервер - выходим, systemd поднимет заново */
         try {
           if (srv) { await srv.wsEndpoint(); }  // throws если сервер мёртв
         } catch (e2) {
-          log('браузер-сервер мёртв — выхожу на рестарт systemd');
+          log('браузер-сервер мёртв - выхожу на рестарт systemd');
           process.exit(1);
         }
       }
@@ -344,7 +344,7 @@ async function main() {
 }
 
 process.on('SIGTERM', async () => {
-  log('SIGTERM — сохраняю сессию и аккуратно выхожу');
+  log('SIGTERM - сохраняю сессию и аккуратно выхожу');
   try { if (ctx) await ctx.storageState({ path: SESSION_FILE }); } catch (e) {}
   try { fs.unlinkSync(WS_FILE); } catch (e) {}
   try { fs.unlinkSync(HEARTBEAT); } catch (e) {}

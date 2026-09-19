@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""api_helper.py — JSON-API управления сбором (консоль/SSH).
+"""api_helper.py - JSON-API управления сбором (консоль/SSH).
 
-Наружу сервер ничего не слушает — доступ только по root-SSH.
+Наружу сервер ничего не слушает - доступ только по root-SSH.
 
 Подкоманды (argv[1]):
-  status  — состояние: идёт ли сбор, статистика базы (всего/за дни),
+  status  - состояние: идёт ли сбор, статистика базы (всего/за дни),
             последний прогон (ff_last_run.json), последние объявления,
             хвост живого журнала ff_collect.log;
-  collect — запустить сбор сейчас (ff_collect: Firefox + сессия
+  collect - запустить сбор сейчас (ff_collect: Firefox + сессия
             из avito_session.json, nohup, в фоне; env как у
-            systemd: DISPLAY, AVITO_PROXY). По умолчанию — поиск
+            systemd: DISPLAY, AVITO_PROXY). По умолчанию - поиск
             «сво по контракту» через строку поиска (лимит 300
             номеров); опционально: api_helper.py collect
-            [search|category] [max_phones]. Если сбор уже идёт —
+            [search|category] [max_phones]. Если сбор уже идёт -
             {"ok": true, "already_running": true};
-  stop    — остановить идущий сбор (мягко: SIGTERM, данные
-            сохраняются); если сбор не идёт — {"ok": true,
+  stop    - остановить идущий сбор (мягко: SIGTERM, данные
+            сохраняются); если сбор не идёт - {"ok": true,
             "not_running": true};
-  report  — собрать свежий Эксель (excel_report.py) и отдать base64.
+  report  - собрать свежий Эксель (excel_report.py) и отдать base64.
 
 stdout = ровно ОДНА строка JSON.
 """
@@ -38,7 +38,7 @@ from datetime import datetime, timedelta
 BASE_DIR = os.environ.get("AVITO_BASE_DIR", "/root/avito-svo")
 DB_PATH = os.path.join(BASE_DIR, "avito.db")
 LAST_RUN_FILE = os.path.join(BASE_DIR, "last_run.json")
-#: итог прогона ff_collect (Firefox-коллектор «Работа → Военный»)
+#: итог прогона ff_collect (Firefox-коллектор «Работа -> Военный»)
 FF_LAST_RUN_FILE = os.path.join(BASE_DIR, "ff_last_run.json")
 PARSER_LOG = os.path.join(BASE_DIR, "parser.log")
 #: живой журнал ff_collect
@@ -49,7 +49,7 @@ RUN_LOG = os.path.join(BASE_DIR, "ff_collect.log")
 #: файл-флаг «сбор на паузе» (ручной вход юзера на Авито)
 PAUSE_FLAG = os.path.join(BASE_DIR, ".parser_paused")
 
-#: окружение ручного запуска коллектора — как у systemd-юнита
+#: окружение ручного запуска коллектора - как у systemd-юнита
 #: (proxy.conf: AVITO_PROXY=socks5://127.0.0.1:10808, DISPLAY=:1)
 LAUNCH_ENV = {
     "DISPLAY": ":1",
@@ -82,7 +82,7 @@ def _read_json(path: str):
 def _parser_running() -> bool:
     """Идёт ли сбор: держит ли кто-то flock .parser.lock.
 
-    Это тот же лок, который берёт коллектор; -w 1 — гонка двух
+    Это тот же лок, который берёт коллектор; -w 1 - гонка двух
     status-запросов не даёт ложного «running».
     """
     lock = os.path.join(BASE_DIR, ".parser.lock")
@@ -181,7 +181,7 @@ def cmd_collect() -> None:
     except ValueError:
         max_phones = 300
     # ff_collect: Firefox + сессия из avito_session.json, бюджет
-    # 40 мин (поиск — с лимитом номеров); без сессии сам откажется
+    # 40 мин (поиск - с лимитом номеров); без сессии сам откажется
     # с no_session
     cmd = [sys.executable, "-u",
            os.path.join(BASE_DIR, "ff_collect.py"),
@@ -204,9 +204,9 @@ def cmd_collect() -> None:
 def cmd_stop() -> None:
     """Остановить сбор (SIGTERM).
 
-    SIGTERM — ff_collect завершается мягко (доканчивает
+    SIGTERM - ff_collect завершается мягко (доканчивает
     карточку, сохраняет БД и сессию); через 8с выжившим SIGKILL.
-    Firefox юзера (профиль ai-agent) не трогается — только
+    Firefox юзера (профиль ai-agent) не трогается - только
     ff_profile коллектора.
     """
     if not _parser_running():

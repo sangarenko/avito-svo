@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-avito_captcha.py — модуль капчи: солвер GeeTest v4 «слайдер».
+avito_captcha.py - модуль капчи: солвер GeeTest v4 «слайдер».
 
 Метод (проверен на живых капчах Авито):
-    * bg 300x200 + slice 80x80 RGBA — CSS background-images на
+    * bg 300x200 + slice 80x80 RGBA - CSS background-images на
       .geetest_bg / .geetest_slice_bg, картинки на static.geetest.com;
     * карты краёв Собеля, у слайса края зануляются вне маски alpha>40;
     * masked NCC: скользим окном слайса по фону, ищем резкий
       унимодальный пик (score ~0.5-0.58) -> x щели;
     * драг человечный: cubic ease-out, 25-35 шагов, джиттер,
-      перелёт 4-12 px и коррекция назад — слайдер Авито ест только
+      перелёт 4-12 px и коррекция назад - слайдер Авито ест только
       такие траектории.
 
 Self-test:

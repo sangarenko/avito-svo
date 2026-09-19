@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-avito_classify.py — модуль классификации загруженной страницы.
+avito_classify.py - модуль классификации загруженной страницы.
 
 classify(page) -> 'items' | 'block' | 'captcha' | 'empty' | 'unknown'
-    items   — выдача с карточками;
-    block   — «Доступ ограничен» / «проблема с IP» / «проверка безопасн.»;
-    captcha — живой GeeTest-виджет в DOM;
-    empty   — страница загрузилась, но карточек нет;
-    unknown — навигационная ошибка / белый лист.
+    items   - выдача с карточками;
+    block   - «Доступ ограничен» / «проблема с IP» / «проверка безопасн.»;
+    captcha - живой GeeTest-виджет в DOM;
+    empty   - страница загрузилась, но карточек нет;
+    unknown - навигационная ошибка / белый лист.
 
 Плюс: click_block_continue (кнопка «Продолжить» на мягком бане) и
 detect_login_state (детект входа в аккаунт Авито).
@@ -44,14 +44,14 @@ def classify(page) -> str:
     # NOTE: the geetest check must run BEFORE the block-text check: the
     # soft-ban page («Доступ ограничен ... нажмите Продолжить») keeps its
     # block text while the captcha widget is already rendered on top of
-    # it — classifying that combined state as 'captcha' lets the solver
+    # it - classifying that combined state as 'captcha' lets the solver
     # lift the ban; pure IP blocks have no geetest markers at all.
     if (".geetest" in content
             or "geetest_box" in content
             or "geetest_wrap" in content):
         # подтверждаем виджет в DOM: одна лишь ссылка на static.geetest.com
-        # в скриптах нормальной страницы — НЕ капча (иначе ложный 'captcha'
-        # и бессмысленный стоп прогона). Ошибка локатора — ведём себя как
+        # в скриптах нормальной страницы - НЕ капча (иначе ложный 'captcha'
+        # и бессмысленный стоп прогона). Ошибка локатора - ведём себя как
         # старая проверка (conservative).
         try:
             widget = page.locator(
@@ -72,7 +72,7 @@ def classify(page) -> str:
         pass
     # Avito renders the listing client-side: domcontentloaded fires long
     # before the item markers exist. Wait a bit for them before declaring
-    # the page empty — otherwise CSR pages get misclassified as 'empty'
+    # the page empty - otherwise CSR pages get misclassified as 'empty'
     # and dropped (root cause of the "block после ретрая" spam).
     try:
         page.wait_for_selector(
@@ -97,7 +97,7 @@ def click_block_continue(page) -> bool:
         loc = page.get_by_role("button", name="Продолжить")
         if loc.count() > 0 and loc.first.is_visible():
             loc.first.click()
-            log("block: нажата «Продолжить» (мягкий бан → капча)")
+            log("block: нажата «Продолжить» (мягкий бан -> капча)")
             return True
     except Exception:
         pass
@@ -109,7 +109,7 @@ def detect_login_state(page) -> bool:
 
     Tries, in order, until the first hit:
       0. FAST PATH: while on /login (or any *login* URL) the session is
-         anonymous by definition — anonymous pages also carry the
+         anonymous by definition - anonymous pages also carry the
          «Избранное» link and cookie noise, which must never count;
       1. a combined wait for the CSS avatar/user markers (~1.5 s);
       2. the text 'Мои объявления' anywhere (~1.5 s);
@@ -122,7 +122,7 @@ def detect_login_state(page) -> bool:
     logged = False
     try:
         try:
-            # фрагмент (#login?authsrc=h) — это модалка на главной, а НЕ
+            # фрагмент (#login?authsrc=h) - это модалка на главной, а НЕ
             # страница /login: срезаем его до проверки пути, иначе
             # успешный вход через модалку никогда не детектится
             url = (page.url or "").lower().split("#")[0]

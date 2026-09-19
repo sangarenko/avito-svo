@@ -3,33 +3,33 @@
 """
 tg_bot.py - Telegram-бот @avitosobiralkabot.
 
-Сбор телефонов рекрутёров с Авито в ОДНОМ режиме — ПОИСК
+Сбор телефонов рекрутёров с Авито в ОДНОМ режиме - ПОИСК
 «сво по контракту» (moskva_i_mo?q=сво+по+контракту, «По дате»,
 лимит 300 номеров, тег БД search_svo_kontrakt). Категория
-«Работа → Военный» не используется: по ней выходило в 5-6 раз
+«Работа -> Военный» не используется: по ней выходило в 5-6 раз
 меньше номеров на карточку, чем по поиску. БД пишется ПО ХОДУ
 сбора (каждый номер сразу, не в конце).
 
 Расписание:
-    * 07:00, 08:00, 09:00, 10:00, 11:00 МСК — ТИХИЙ плановый сбор
+    * 07:00, 08:00, 09:00, 10:00, 11:00 МСК - ТИХИЙ плановый сбор
       «сво по контракту» (макс 300, бюджет 30 мин) БЕЗ сообщений;
-    * 12:00 МСК — эксель-отчёт в чат (ретраи каждую минуту до 12:59);
-    * остальное время — тишина (никаких рассылок и вопросов).
-    Уже собранное пропускается — прогон добирает только новое.
+    * 12:00 МСК - эксель-отчёт в чат (ретраи каждую минуту до 12:59);
+    * остальное время - тишина (никаких рассылок и вопросов).
+    Уже собранное пропускается - прогон добирает только новое.
 
 Кнопки клавиатуры:
-    📊 Получить эксель отчёт  — свежий эксель из базы по нажатию;
-    🔍 Спарсить «сво по контракту» (поиск) — полный прогон поиска
+    📊 Получить эксель отчёт  - свежий эксель из базы по нажатию;
+    🔍 Спарсить «сво по контракту» (поиск) - полный прогон поиска
                                (макс 300 номеров) + эксель;
-    ⏹ Остановить парсер      — мягкая остановка (SIGTERM: доканчивает
+    ⏹ Остановить парсер      - мягкая остановка (SIGTERM: доканчивает
                                текущую карточку, сохраняет всё).
 
 Вход на Авито выполняется руками в реальном Firefox (профиль
 ai-agent), firefox_session_monitor экспортирует сессию в
-avito_session.json — от бота входа не требуется.
+avito_session.json - от бота входа не требуется.
 
 Прочее:
-    * ALLOWED_CHATS — чужие чаты молча игнорируются, базу не раздаём;
+    * ALLOWED_CHATS - чужие чаты молча игнорируются, базу не раздаём;
     * subprocess в своей группе процессов (killpg по таймауту);
       offset апдейтов персистится в bot_state.json;
     * два прогона невозможны (flock .parser.lock в ff_collect).
@@ -71,7 +71,7 @@ TZ_NAME = "Europe/Moscow"
 
 # --- расписание: тихий сбор 07-11, отчёт в 12:00 -----------------------
 COLLECT_HOURS = (7, 8, 9, 10, 11)  # тихий сбор в начале каждого часа
-#: во всех часах — поиск «сво по контракту» (категория «Военный» не используется)
+#: во всех часах - поиск «сво по контракту» (категория «Военный» не используется)
 SCHEDULE_MODES = {h: "search" for h in COLLECT_HOURS}
 #: лимит номеров для планового/ручного прогона поиска
 SEARCH_MAX_PHONES = 300
@@ -298,14 +298,14 @@ def _run_subprocess(cmd: list, timeout: int) -> tuple:
 
 def run_parser(extra_args: list | None = None,
                timeout: int = PARSER_TIMEOUT) -> dict:
-    """Запустить ff_collect — сбор поиском «сво по контракту».
+    """Запустить ff_collect - сбор поиском «сво по контракту».
 
     Вход через строку поиска (moskva_i_mo?q=сво+по+контракту),
     сортировка «По дате», обход выдачи ПО ПОРЯДКУ (сверху вниз,
-    дубли описаний пропускаются) + страницы пагинации; телефоны —
+    дубли описаний пропускаются) + страницы пагинации; телефоны -
     из hover-попапов без захода в объявления, лимит номеров и
     бюджет времени задаётся аргументами. Итог читается из
-    ff_last_run.json (stdout — живой лог).
+    ff_last_run.json (stdout - живой лог).
     """
     try:                          # зачистить протухший флаг остановки
         if os.path.exists(STOP_FLAG):
@@ -367,8 +367,8 @@ def build_excel() -> str:
 def _stop_parser_procs() -> int:
     """Остановить ff_collect и его Firefox. Возвращает число убитых.
 
-    Порядок: SIGTERM (мягко — ff_collect доканчивает карточку,
-    сохраняет БД и сессию) → пауза → SIGKILL выжившим.
+    Порядок: SIGTERM (мягко - ff_collect доканчивает карточку,
+    сохраняет БД и сессию) -> пауза -> SIGKILL выжившим.
     ВАЖНО: убивается только Firefox коллектора (профиль ff_profile);
     реальный Firefox юзера (ai-agent) и монитор не трогаются.
     """
@@ -403,7 +403,7 @@ def _stop_parser_procs() -> int:
             try:
                 os.kill(pid, 0)
                 os.kill(pid, signal.SIGKILL)
-                log("парсер %d не завершился — SIGKILL" % pid)
+                log("парсер %d не завершился - SIGKILL" % pid)
             except ProcessLookupError:
                 pass
             except Exception:
@@ -427,7 +427,7 @@ def _handle_stop(chat_id: int) -> None:
     n = _stop_parser_procs()
     if n > 0:
         send_kb_text(chat_id, "⏹ Парсер останавливаю (доканчивает "
-                              "текущую карточку и сохраняет базу — "
+                              "текущую карточку и сохраняет базу - "
                               "пара секунд).")
     else:
         try:
@@ -435,7 +435,7 @@ def _handle_stop(chat_id: int) -> None:
                 os.remove(STOP_FLAG)
         except OSError:
             pass
-        send_kb_text(chat_id, "Парсер не запущен — останавливать "
+        send_kb_text(chat_id, "Парсер не запущен - останавливать "
                               "нечего.")
 
 
@@ -463,12 +463,12 @@ def _reparse_worker(chat_id: int) -> None:
                          timeout=PARSER_TIMEOUT_DEEP)
         if _stopped_by_user():
             send_kb_text(chat_id, "⏹ Сбор остановлен. Собранное до "
-                                  "этого места — в базе; эксель — "
+                                  "этого места - в базе; эксель - "
                                   "кнопкой «Получить эксель отчёт».")
             return
         d = res.get("data") or {}
         if res.get("already_running"):
-            send_kb_text(chat_id, "⏳ Сбор уже выполняется — дождись "
+            send_kb_text(chat_id, "⏳ Сбор уже выполняется - дождись "
                                   "завершения, эксель придёт сам.")
             return
         if not res["ok"]:
@@ -480,20 +480,20 @@ def _reparse_worker(chat_id: int) -> None:
         path = build_excel()
         phones = d.get("phones") or []
         st_ = _db_stats()
-        caption = ("avito · Работа→Военный · вся категория · страниц: %s · "
-                   "объявлений: %s · номеров: %d · база: %s"
+        caption = ("avito | Работа->Военный | вся категория | страниц: %s | "
+                   "объявлений: %s | номеров: %d | база: %s"
                    % (d.get("pages"), d.get("total_ads"), len(phones),
                       st_.get("total")))
         if phones:
             head = ", ".join(phones[:12])
             if len(phones) > 12:
-                head += " …и ещё %d" % (len(phones) - 12)
+                head += " ...и ещё %d" % (len(phones) - 12)
             caption += "\nномера: " + head
         if path:
             send_doc(chat_id, path, caption=caption)
         else:
             send_kb_text(chat_id, "Сбор прошёл (телефонов %d), но эксель "
-                                  "не собрался — нажми «Получить эксель "
+                                  "не собрался - нажми «Получить эксель "
                                   "отчёт»." % len(phones))
     except Exception as e:
         log("reparse_worker: %s" % e)
@@ -510,15 +510,15 @@ def _reparse_worker(chat_id: int) -> None:
 def _handle_reparse(chat_id: int) -> None:
     with PARSE_LOCK:
         if PARSE_JOB.get("active"):
-            send_kb_text(chat_id, "⏳ Полный сбор уже идёт (запущен %s) — "
+            send_kb_text(chat_id, "⏳ Полный сбор уже идёт (запущен %s) - "
                                   "дождись экселя по завершению."
                                   % (PARSE_JOB.get("started") or "?"))
             return
         PARSE_JOB["active"] = True
         PARSE_JOB["started"] = msk_now().strftime("%H:%M")
-    send_kb_text(chat_id, "🔄 Запускаю сбор: Работа → Военный → по дате "
-                          "→ Москва и МО → ВСЯ категория (доскролл "
-                          "каждой страницы + все страницы, 10–40 мин) — "
+    send_kb_text(chat_id, "🔄 Запускаю сбор: Работа -> Военный -> по дате "
+                          "-> Москва и МО -> ВСЯ категория (доскролл "
+                          "каждой страницы + все страницы, 10-40 мин) - "
                           "эксель пришлю по завершению. Каждый номер "
                           "пишется в базу сразу.")
     threading.Thread(target=_reparse_worker, args=(chat_id,),
@@ -537,12 +537,12 @@ def _search_worker(chat_id: int) -> None:
             timeout=PARSER_TIMEOUT_DEEP)
         if _stopped_by_user():
             send_kb_text(chat_id, "⏹ Сбор остановлен. Собранное до "
-                                  "этого места — уже в базе; эксель — "
+                                  "этого места - уже в базе; эксель - "
                                   "кнопкой «Получить эксель отчёт».")
             return
         d = res.get("data") or {}
         if res.get("already_running"):
-            send_kb_text(chat_id, "⏳ Сбор уже выполняется — дождись "
+            send_kb_text(chat_id, "⏳ Сбор уже выполняется - дождись "
                                   "завершения, эксель придёт сам.")
             return
         if not res["ok"]:
@@ -554,20 +554,20 @@ def _search_worker(chat_id: int) -> None:
         path = build_excel()
         phones = d.get("phones") or []
         st_ = _db_stats()
-        caption = ("avito · поиск «сво по контракту» · по дате · макс %s · "
-                   "страниц: %s · объявлений: %s · номеров: %d · база: %s"
+        caption = ("avito | поиск «сво по контракту» | по дате | макс %s | "
+                   "страниц: %s | объявлений: %s | номеров: %d | база: %s"
                    % (SEARCH_MAX_PHONES, d.get("pages"),
                       d.get("total_ads"), len(phones), st_.get("total")))
         if phones:
             head = ", ".join(phones[:12])
             if len(phones) > 12:
-                head += " …и ещё %d" % (len(phones) - 12)
+                head += " ...и ещё %d" % (len(phones) - 12)
             caption += "\nномера: " + head
         if path:
             send_doc(chat_id, path, caption=caption)
         else:
             send_kb_text(chat_id, "Поиск прошёл (телефонов %d), но эксель "
-                                  "не собрался — нажми «Получить эксель "
+                                  "не собрался - нажми «Получить эксель "
                                   "отчёт»." % len(phones))
     except Exception as e:
         log("search_worker: %s" % e)
@@ -584,16 +584,16 @@ def _search_worker(chat_id: int) -> None:
 def _handle_search(chat_id: int) -> None:
     with PARSE_LOCK:
         if PARSE_JOB.get("active"):
-            send_kb_text(chat_id, "⏳ Полный сбор уже идёт (запущен %s) — "
+            send_kb_text(chat_id, "⏳ Полный сбор уже идёт (запущен %s) - "
                                   "дождись экселя по завершению."
                                   % (PARSE_JOB.get("started") or "?"))
             return
         PARSE_JOB["active"] = True
         PARSE_JOB["started"] = msk_now().strftime("%H:%M")
     send_kb_text(chat_id, "🔍 Запускаю сбор: поиск Авито «сво по "
-                          "контракту» → Москва и МО → «По дате» → "
+                          "контракту» -> Москва и МО -> «По дате» -> "
                           "обход выдачи с телефонами из попапов "
-                          "(макс %s номеров, 10–40 мин). Уже знакомые "
+                          "(макс %s номеров, 10-40 мин). Уже знакомые "
                           "объявления проскакиваю быстро. Эксель пришлю "
                           "по завершению." % SEARCH_MAX_PHONES)
     threading.Thread(target=_search_worker, args=(chat_id,),
@@ -620,7 +620,7 @@ def _free_mem_for_run(tag: str = "") -> None:
     """Перед прогоном убедиться, что памяти хватает (~2 ГБ).
 
     Посторонний Firefox (профиль ai-agent) может отъедать 0.5-0.8 ГБ,
-    а контент-процесс сбора распухает до ~1.9 ГБ — при нехватке
+    а контент-процесс сбора распухает до ~1.9 ГБ - при нехватке
     earlyoom убивает именно сбор. При нехватке прибираем браузер
     ai-agent (SIGTERM): ai-agent сам его пересоздаёт, для него это
     безопасно.
@@ -652,12 +652,12 @@ def _free_mem_for_run(tag: str = "") -> None:
                 pass
         if pids:
             time.sleep(3)
-            log("память перед прогоном%s: %d МБ — прибрал браузер "
+            log("память перед прогоном%s: %d МБ - прибрал браузер "
                 "ai-agent (PID %s), он пересоздастся сам"
                 % ((" " + tag) if tag else "", avail,
                    ",".join(str(p) for p in pids)))
         else:
-            log("память перед прогоном%s: %d МБ — прибирать нечего, "
+            log("память перед прогоном%s: %d МБ - прибирать нечего, "
                 "идём как есть (swap докроет)"
                 % ((" " + tag) if tag else "", avail))
     except Exception as e:
@@ -667,7 +667,7 @@ def _free_mem_for_run(tag: str = "") -> None:
 def _collect_step(now: datetime) -> None:
     """Один тихий плановый сбор (начало часа 07-11).
 
-    Режим: поиск «сво по контракту» (макс 300) во всех часах —
+    Режим: поиск «сво по контракту» (макс 300) во всех часах -
     категорию «Военный» не собираем.
     """
     today = now.strftime("%Y-%m-%d")
@@ -678,7 +678,7 @@ def _collect_step(now: datetime) -> None:
     with PARSE_LOCK:
         manual_active = bool(PARSE_JOB.get("active"))
     if manual_active:
-        log("плановый сбор %02d:00 пропущен — идёт ручной полный прогон"
+        log("плановый сбор %02d:00 пропущен - идёт ручной полный прогон"
             % now.hour)
         return
     mode = SCHEDULE_MODES.get(now.hour, "category")
@@ -690,7 +690,7 @@ def _collect_step(now: datetime) -> None:
     label = ("поиск «сво по контракту» (макс %s)"
              % SEARCH_MAX_PHONES) if mode == "search" \
         else "категория «Военный»"
-    log("тихий плановый сбор %s %02d:00 — %s" % (today, now.hour, label))
+    log("тихий плановый сбор %s %02d:00 - %s" % (today, now.hour, label))
     _free_mem_for_run("%02d:00" % now.hour)
     res = run_parser(extra_args=extra)
     _stopped_by_user()          # плановый сбор молчит и про остановку
@@ -700,7 +700,7 @@ def _collect_step(now: datetime) -> None:
             "новых в базу %s"
             % (now.hour, mode, len(d.get("phones") or []),
                d.get("total_ads"), d.get("new")))
-        # БЕЗ внешнего STATE_LOCK — update_state() берёт его сам;
+        # БЕЗ внешнего STATE_LOCK - update_state() берёт его сам;
         # вложенный не-реентерабельный лок замораживает оба потока
         st = load_state()
         cl = _prune_collect_log(st, today)
@@ -710,9 +710,9 @@ def _collect_step(now: datetime) -> None:
         cl[today] = done
         update_state(collect_log=cl)
     else:
-        # не помечаем час сделанным — на следующем часу повторится
+        # не помечаем час сделанным - на следующем часу повторится
         # (последняя попытка 11:00); дальше день закрывает отчёт 12:00
-        log("плановый сбор %02d:00 (%s) не удался — повторю в следующий час"
+        log("плановый сбор %02d:00 (%s) не удался - повторю в следующий час"
             % (now.hour, mode))
 
 
@@ -726,14 +726,14 @@ def _report_step(now: datetime) -> None:
     if st.get("report_date") != today:
         tries = 0
     if tries >= MAX_REPORT_TRIES:
-        return                    # сдались (молча) — не спамим до завтра
+        return                    # сдались (молча) - не спамим до завтра
     if now.hour == REPORT_HOUR and now.minute > REPORT_RETRY_UNTIL \
             and tries > 0:
         return
 
     st_ = _db_stats()
-    caption = ("avito · поиск «сво по контракту» · %s · за день: %s · "
-               "с телефонами: %s · всего: %s"
+    caption = ("avito | поиск «сво по контракту» | %s | за день: %s | "
+               "с телефонами: %s | всего: %s"
                % (now.strftime("%d.%m"), st_.get("today"),
                   st_.get("phones"), st_.get("total")))
     path = build_excel()
@@ -761,7 +761,7 @@ def _report_step(now: datetime) -> None:
 def _daily_step() -> None:
     """Один шаг цикла ежедневного потока (вызывается из daily_worker)."""
     now = msk_now()
-    # тихий сбор в начале каждого часа 07..11 (все часы —
+    # тихий сбор в начале каждого часа 07..11 (все часы -
     # только поиск «сво по контракту»)
     if now.hour in COLLECT_HOURS and now.minute < 5:
         _collect_step(now)
@@ -775,7 +775,7 @@ def _daily_step() -> None:
 
 def daily_worker() -> None:
     """Фоновый поток: кнопка в главном потоке отвечает всегда."""
-    log("поток расписания запущен: тихий сбор 07-11 — только поиск "
+    log("поток расписания запущен: тихий сбор 07-11 - только поиск "
         "«сво по контракту» (макс 300), отчёт в 12:00")
     while True:
         try:
@@ -803,7 +803,7 @@ def process_update(upd: dict) -> None:
         send_kb_text(chat_id,
                      "Вход на Авито выполняется в реальном Firefox на "
                      "сервере (профиль ai-agent, виден через noVNC): "
-                     "залогинься там — монитор автоматически экспортирует "
+                     "залогинься там - монитор автоматически экспортирует "
                      "сессию для сбора, от бота ничего не нужно.")
         return
 
@@ -820,7 +820,7 @@ def process_update(upd: dict) -> None:
         send_kb_text(chat_id,
                      "ℹ️ Категорию «Военный» не собираем: по ней выходит "
                      "в 5-6 раз меньше номеров, чем по поиску. "
-                     "Собираем только поиск «сво по контракту» — "
+                     "Собираем только поиск «сво по контракту» - "
                      "кнопка 🔍 или команда /поиск.")
         return
 
@@ -838,7 +838,7 @@ def process_update(upd: dict) -> None:
         if path:
             lr = read_last_run()
             send_doc(chat_id, path,
-                     caption="avito · контракт сво · %s · всего: %s"
+                     caption="avito | контракт сво | %s | всего: %s"
                              % (msk_now().strftime("%d.%m %H:%M"),
                                 lr.get("db_total")))
         else:

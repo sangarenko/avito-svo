@@ -1,44 +1,44 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""ff_collect.py — коллектор Авито: поиск «сво по контракту» на Firefox.
+"""ff_collect.py - коллектор Авито: поиск «сво по контракту» на Firefox.
 
 Режимы (аргумент --mode):
-  * search (основной) — поиск «сво по контракту» по региону
+  * search (основной) - поиск «сво по контракту» по региону
     Москва и МО, сортировка «По дате»; тег БД search_svo_kontrakt;
-  * category — вход через категории: Главная → «Работа и
-    подработка» → «Военный» → «Сначала из Москвы и МО» → «По
+  * category - вход через категории: Главная -> «Работа и
+    подработка» -> «Военный» -> «Сначала из Москвы и МО» -> «По
     дате»; тег БД rabota_voennyi (в расписании не используется:
     по поиску выходит в 5-6 раз больше номеров на карточку).
 
 Ключевая механика:
   * БД пишется ПО ХОДУ сбора: каждый собранный номер попадает в
     базу сразу после находки; карточки без кнопки телефона
-    фиксируются (no_phone) — следующий прогон их не трогает;
+    фиксируются (no_phone) - следующий прогон их не трогает;
   * обход СТРОГО ПО ПОРЯДКУ: карточки сортируются по вертикальной
     позиции на странице (DOM у Авито виртуализированный и
     перемонтируется не по порядку), обработка сверху вниз, в логе
     виден порядковый номер;
   * дедуп по описанию: нормализованный заголовок уже встречался
-    (в этом прогоне или в базе с номером) → карточка пропускается
+    (в этом прогоне или в базе с номером) -> карточка пропускается
     целиком, без hover; клоны пишутся в БД со статусом dup_title;
-  * ускорение: круг без живых карточек (всё известное/клоны) —
+  * ускорение: круг без живых карточек (всё известное/клоны) -
     быстрая прокрутка крупным шагом; hover только для новых;
   * мягкий блок «Доступ ограничен» снимается нажатиями «Продолжить»
-    и обновлением страницы (F5), капча не решается — жёсткий
+    и обновлением страницы (F5), капча не решается - жёсткий
     cooldown 20 минут;
   * авария не теряет данные: БД сохраняется каждые 5 номеров, при
     закрытии окна/ошибке несохранённое спасается в except-ветке;
   * SIGTERM = мягкая остановка: текущая карточка доканчивается,
     всё собранное сохраняется, итог пишется с stop_reason=stopped;
   * сперва подключение к резидентному браузеру
-    (ff_browser_daemon.js — вкладка Авито открыта постоянно),
-    фолбэк — свой persistent-профиль ff_profile/.
+    (ff_browser_daemon.js - вкладка Авито открыта постоянно),
+    фолбэк - свой persistent-профиль ff_profile/.
 
-Окружение: Firefox (антидетект Win10 FF128, прокси socks5 →
+Окружение: Firefox (антидетект Win10 FF128, прокси socks5 ->
 Москва), сессия юзера из avito_session.json (экспорт монитором
 реального Firefox), flock .parser.lock (два прогона одновременно
 невозможны), телефоны из hover-попапа «Показать телефон»
-(картинка → OCR) без захода в объявления, OCR-кэш по md5 картинки.
+(картинка -> OCR) без захода в объявления, OCR-кэш по md5 картинки.
 
 Запуск (юнит/вручную):
   DISPLAY=:1 AVITO_PROXY=socks5://127.0.0.1:10808 \
@@ -117,15 +117,15 @@ FF_PREFS = {
 }
 
 #: OCR-кэш: md5 картинки-номера -> телефон (клоны одного рекрутёра
-#: дают байт-в-байт одинаковые картинки — tesseract достаточно 1 раз)
+#: дают байт-в-байт одинаковые картинки - tesseract достаточно 1 раз)
 _OCR_CACHE: dict = {}
 
 #: мягкая остановка (SIGTERM от кнопки «Остановить парсер»)
 _STOP = {"flag": False}
 
-#: ЖЁСТКИЙ блок: «Доступ ограничен» не снялся за 3 попытки —
+#: ЖЁСТКИЙ блок: «Доступ ограничен» не снялся за 3 попытки -
 #: страница останавливается сразу, без многочасовых ретраев;
-#: остывает ~20 мин (до этого новые попытки не делаются —
+#: остывает ~20 мин (до этого новые попытки не делаются -
 #: следующий плановый час всё равно повторит прогон)
 _BLOCK_HARD = {"ts": 0.0}
 _BLOCK_COOLDOWN = 20 * 60
@@ -158,7 +158,7 @@ def pause(a: float, b: float) -> None:
 
 
 def now_msk() -> datetime:
-    """Время МСК (как весь пайплайн — эксель/бот/журналы)."""
+    """Время МСК (как весь пайплайн - эксель/бот/журналы)."""
     if _MSK is not None:
         return datetime.now(_MSK)
     return datetime.now(timezone.utc) + timedelta(hours=3)
@@ -225,12 +225,12 @@ def login_ok(page) -> bool:
 # ---------------------------------------------------------------- браузер
 
 def resident_endpoint() -> str:
-    """ws-эндпоинт резидентного браузера ('' — если его нет).
+    """ws-эндпоинт резидентного браузера ('' - если его нет).
 
     Демон ff_browser_daemon.js держит Firefox открытым ПОСТОЯННО с
     вкладкой Авито (Авито флагал IP из-за браузера, который раньше
     поднимался и закрывался на каждый прогон). Heartbeat обязан быть
-    свежим (< 180 c), иначе считаем демона мёртвым — фолбэк на свой
+    свежим (< 180 c), иначе считаем демона мёртвым - фолбэк на свой
     persistent-профиль.
     """
     try:
@@ -251,8 +251,8 @@ def launch(pw):
 
     Подключаемся (playwright.connect) и открываем СВОЙ контекст-вкладку
     в уже работающем браузере; по завершению закрывается только он
-    (ctx.close() в finally главного блока) — сам браузер и вкладка-демон
-    остаются жить. Фолбэк — свой persistent-профиль, как раньше.
+    (ctx.close() в finally главного блока) - сам браузер и вкладка-демон
+    остаются жить. Фолбэк - свой persistent-профиль, как раньше.
     """
     kwargs = dict(
         viewport={"width": 1280, "height": 800},
@@ -270,7 +270,7 @@ def launch(pw):
             s.close()
             LOG("прокси: %s" % px)
         except Exception as e:
-            LOG("!!! прокси %s недоступен (%s) — выходим" % (px, e))
+            LOG("!!! прокси %s недоступен (%s) - выходим" % (px, e))
             raise SystemExit(3)
     ep = resident_endpoint()
     if ep:
@@ -278,11 +278,11 @@ def launch(pw):
             browser = pw.firefox.connect(ep, timeout=20000)
             ctx = browser.new_context(**kwargs)
             ctx.add_init_script(INIT_JS)
-            LOG("подключён к резидентному браузеру — вкладка Авито живёт "
+            LOG("подключён к резидентному браузеру - вкладка Авито живёт "
                 "постоянно, закрою только свою вкладку прогона")
             return ctx
         except Exception as e:
-            LOG("резидентный браузер не подключился (%s) — свой Firefox"
+            LOG("резидентный браузер не подключился (%s) - свой Firefox"
                 % str(e)[:120])
     launch_kw = dict(kwargs)
     launch_kw["headless"] = False
@@ -335,7 +335,7 @@ def page_state(page) -> str:
 
 
 def goto(page, url: str, settle: float = 3.0, tries: int = 2) -> str:
-    """goto + классификация; блок → бэкофф и повтор."""
+    """goto + классификация; блок -> бэкофф и повтор."""
     c = "other"
     for attempt in range(1, tries + 1):
         LOG("goto %s (попытка %d)" % (url.split("?")[0], attempt))
@@ -350,7 +350,7 @@ def goto(page, url: str, settle: float = 3.0, tries: int = 2) -> str:
             % (c, page.locator("[data-marker='item']").count(),
                page.url[:100]))
         if c == "block" and attempt < tries:
-            LOG("блок — пауза 20-35с и повтор")
+            LOG("блок - пауза 20-35с и повтор")
             pause(20, 35)
             continue
         break
@@ -360,7 +360,7 @@ def goto(page, url: str, settle: float = 3.0, tries: int = 2) -> str:
 # ------------------------------------------------------------------- флоу
 
 def step_home_to_rabota(page) -> bool:
-    """Главная → плитка «Работа и подработка» → SERP вакансий."""
+    """Главная -> плитка «Работа и подработка» -> SERP вакансий."""
     c = goto(page, "https://www.avito.ru/")
     shot(page, "home")
     if not login_ok(page):
@@ -374,10 +374,10 @@ def step_home_to_rabota(page) -> bool:
         time.sleep(3)
         dismiss_popups(page)
     except Exception as e:
-        LOG("плитка fail (%s) — прямой goto SERP" % str(e)[:70])
+        LOG("плитка fail (%s) - прямой goto SERP" % str(e)[:70])
         goto(page, "https://www.avito.ru/moskva_i_mo/vakansii")
     if page.locator("[data-marker='item']").count() == 0:
-        LOG("SERP вакансий пуст — прямой goto")
+        LOG("SERP вакансий пуст - прямой goto")
         goto(page, "https://www.avito.ru/moskva_i_mo/vakansii")
     shot(page, "vakansii")
     return page.locator("[data-marker='item']").count() > 0
@@ -397,7 +397,7 @@ def step_category_voennyi(page) -> bool:
 
     href = _click_voennyi_link()
     if not href:
-        LOG("ссылка «Военный» не в DOM — перезагружаю SERP целиком")
+        LOG("ссылка «Военный» не в DOM - перезагружаю SERP целиком")
         goto(page, "https://www.avito.ru/moskva_i_mo/vakansii")
         time.sleep(1.5)
         href = _click_voennyi_link()
@@ -411,7 +411,7 @@ def step_category_voennyi(page) -> bool:
         time.sleep(3)
         dismiss_popups(page)
     else:
-        LOG("ссылка «Военный» опять не найдена — прямой goto категории")
+        LOG("ссылка «Военный» опять не найдена - прямой goto категории")
         goto(page, VOENNYI_URL)
 
     if "voennyi" not in (page.url or ""):
@@ -461,18 +461,18 @@ def _try_search_input(page, query: str) -> bool:
 def step_search_query(page, query: str) -> bool:
     """Режим ПОИСКА: вход через запрос, НЕ через категорию.
 
-    Прямой URL /moskva_i_mo?q=<запрос> — выдача по всем рубрикам
+    Прямой URL /moskva_i_mo?q=<запрос> - выдача по всем рубрикам
     региона (вакансии «сво по контракту» живут в т.ч. в «Другое»);
-    фолбэк — строка поиска на главной. Дальше тот же конвейер:
-    «По дате» → последовательный обход → hover-телефоны.
+    фолбэк - строка поиска на главной. Дальше тот же конвейер:
+    «По дате» -> последовательный обход -> hover-телефоны.
     """
     url = "%s?q=%s" % (REGION_URL, urllib.parse.quote_plus(query))
     c = goto(page, url)
     n = page.locator("[data-marker='item']").count()
-    LOG("SERP поиска «%s»: %s · items=%d · url=%s"
+    LOG("SERP поиска «%s»: %s | items=%d | url=%s"
         % (query, c, n, page.url[:110]))
     if n == 0:
-        LOG("выдача поиска пустая — фолбэк через строку поиска")
+        LOG("выдача поиска пустая - фолбэк через строку поиска")
         if _try_search_input(page, query):
             shot(page, "search")
             return True
@@ -487,7 +487,7 @@ def _toggle_state(page):
     """Состояние тумблера «Сначала из Москвы и МО»: True/False/None.
 
     None = тумблер не найден/не распознан. Возвращает aria-checked
-    role=switch-контейнера (наблюдается 'true'/'false'), фолбэк —
+    role=switch-контейнера (наблюдается 'true'/'false'), фолбэк -
     признаки включённости в имени класса.
     """
     tog = page.locator("text=Сначала из Москвы")
@@ -528,26 +528,26 @@ def ensure_moscow_first(page, allow_click: bool = True,
 
     Кликаем ТОЛЬКО когда выключен: клик по включённому тумблеру
     его ВЫКЛЮЧАЕТ (безусловный клик гасил галочку,
-    оставленную предыдущим прогоном — юзер видел «не нажал
+    оставленную предыдущим прогоном - юзер видел «не нажал
     с Москвы и Московской области»). После клика состояние
-    ПЕРЕЧИТЫВАЕМ и подтверждаем; неподтвердилось — один повтор.
+    ПЕРЕЧИТЫВАЕМ и подтверждаем; неподтвердилось - один повтор.
     """
     tag = " (%s)" % why if why else ""
     try:
         state = _toggle_state(page)
         if state is None:
-            LOG("тумблер «Сначала из Москвы...» не найден%s — "
+            LOG("тумблер «Сначала из Москвы...» не найден%s - "
                 "пропускаю (категория уже moskva_i_mo)" % tag)
             return True
         if state:
-            LOG("тумблер «Сначала из Москвы и МО»: УЖЕ ВКЛ — "
+            LOG("тумблер «Сначала из Москвы и МО»: УЖЕ ВКЛ - "
                 "не трогаю%s" % tag)
             return True
         if not allow_click:
-            LOG("!!! тумблер «Сначала из Москвы и МО» ВЫКЛ%s — "
+            LOG("!!! тумблер «Сначала из Москвы и МО» ВЫКЛ%s - "
                 "клик запрещён на этом шаге" % tag)
             return False
-        LOG("тумблер «Сначала из Москвы и МО» ВЫКЛ — включаю...%s"
+        LOG("тумблер «Сначала из Москвы и МО» ВЫКЛ - включаю...%s"
             % tag)
         tog = page.locator("text=Сначала из Москвы")
         tog.first.click(timeout=5000)
@@ -557,13 +557,13 @@ def ensure_moscow_first(page, allow_click: bool = True,
             LOG("тумблер: ПОДТВЕРЖДЕНО ВКЛ (url=%s)" % page.url[:120])
             shot(page, "toggle")
             return True
-        # первый клик иногда съедается ре-рендером — один повтор
-        LOG("тумблер: не подтвердился (%s) — повторный клик" % state2)
+        # первый клик иногда съедается ре-рендером - один повтор
+        LOG("тумблер: не подтвердился (%s) - повторный клик" % state2)
         tog.first.click(timeout=5000)
         time.sleep(2.2)
         state3 = _toggle_state(page)
         LOG("тумблер после повтора: %s (url=%s)"
-            % ("ВКЛ — ок" if state3 else "ВСЁ ЕЩЁ ВЫКЛ!",
+            % ("ВКЛ - ок" if state3 else "ВСЁ ЕЩЁ ВЫКЛ!",
                page.url[:120]))
         shot(page, "toggle")
         return bool(state3)
@@ -573,7 +573,7 @@ def ensure_moscow_first(page, allow_click: bool = True,
 
 
 def step_toggle_moscow_first(page) -> None:
-    """Шаг 3: галочка «Сначала из Москвы и МО» — включить/не трогать."""
+    """Шаг 3: галочка «Сначала из Москвы и МО» - включить/не трогать."""
     ensure_moscow_first(page, allow_click=True, why="шаг 3, до сортировки")
 
 
@@ -596,7 +596,7 @@ def step_sort_by_date(page) -> None:
     except Exception as e:
         LOG("сортировка fail: %s" % str(e)[:80])
     shot(page, "sorted")
-    # сортировка могла сбросить галочку Москвы — вернуть ВКЛ
+    # сортировка могла сбросить галочку Москвы - вернуть ВКЛ
     ensure_moscow_first(page, allow_click=True, why="после «По дате»")
 
 
@@ -615,8 +615,8 @@ def close_foreign_tabs(page) -> int:
     """Закрыть чужие вкладки (реклама открывает yoomoney и пр.).
 
     Реклама в попапах Авито иногда открывает НОВУЮ вкладку и пере-
-    хватывает фокус окна — карточки Авито остаются в фоновой вкладке
-    и hover по ним падает с таймаутом (замечено на поиске —
+    хватывает фокус окна - карточки Авито остаются в фоновой вкладке
+    и hover по ним падает с таймаутом (замечено на поиске -
     вкладка yoomoney.ru). Закрываем всё не-Авито, основную вкладку
     возвращаем на передний план. Возвращает число закрытых вкладок.
     """
@@ -632,7 +632,7 @@ def close_foreign_tabs(page) -> int:
             except Exception:
                 pass
         if n:
-            LOG("закрыты чужие вкладки: %d (реклама) — вкладку Авито "
+            LOG("закрыты чужие вкладки: %d (реклама) - вкладку Авито "
                 "на передний план" % n)
         try:
             page.bring_to_front()
@@ -644,9 +644,9 @@ def close_foreign_tabs(page) -> int:
 
 
 def block_modal_present(page) -> bool:
-    """Мягкий блок «Доступ ограничен: проблема с IP» — модалка ПОВЕРХ
+    """Мягкий блок «Доступ ограничен: проблема с IP» - модалка ПОВЕРХ
     выдачи (карточки остаются в DOM, поэтому page_state тут не годит-
-    ся: он видит items и выходит). Модалка перекрывает список — все
+    ся: он видит items и выходит). Модалка перекрывает список - все
     hover/клик падают с таймаутом (находка на поиске после ~5
     номеров подряд). Модалка живёт в portal-контейнере В КОНЦЕ DOM,
     поэтому смотрим и хвост текста страницы."""
@@ -662,22 +662,22 @@ def dismiss_block(page, allow_reload: bool = True) -> bool:
     """Снять мягкий блок: «Продолжить» ×5 + обновление страницы (F5).
 
     Мягкий блок снимается обычными нажатиями «Продолжить» и
-    ПРОСТЫМ ОБНОВЛЕНИЕМ страницы; капчу НЕ решаем — осталась после
-    обновления → страницу останавливаем.
-    Не снялся — ЖЁСТКИЙ флаг (cooldown): повтор не раньше 20 минут.
+    ПРОСТЫМ ОБНОВЛЕНИЕМ страницы; капчу НЕ решаем - осталась после
+    обновления -> страницу останавливаем.
+    Не снялся - ЖЁСТКИЙ флаг (cooldown): повтор не раньше 20 минут.
     """
     try:
         if time.time() - _BLOCK_HARD["ts"] < _BLOCK_COOLDOWN:
-            return False            # недавно НЕ снялся — не жжём время
+            return False            # недавно НЕ снялся - не жжём время
         if not block_modal_present(page):
             return True
-        LOG("!!! «Доступ ограничен» (проблема с IP) — жму «Продолжить»")
+        LOG("!!! «Доступ ограничен» (проблема с IP) - жму «Продолжить»")
         shot(page, "block")
         reloads = 0
         for attempt in range(1, 6):
             # после F5 (предыдущая итерация) блок мог уйти сам
             if attempt > 1 and not block_modal_present(page):
-                LOG("блок снят — продолжаю обход")
+                LOG("блок снят - продолжаю обход")
                 dismiss_popups(page)
                 return True
             try:
@@ -695,26 +695,26 @@ def dismiss_block(page, allow_reload: bool = True) -> bool:
             if not block_modal_present(page):
                 try:
                     if page.locator(".geetest_btn, .geetest_radar").count():
-                        LOG("!!! после блока вылезла капча — страницу "
+                        LOG("!!! после блока вылезла капча - страницу "
                             "останавливаю (ждём следующий прогон)")
                         _BLOCK_HARD["ts"] = time.time()
                         return False
                 except Exception:
                     pass
-                LOG("блок снят (попытка %d) — продолжаю обход" % attempt)
+                LOG("блок снят (попытка %d) - продолжаю обход" % attempt)
                 dismiss_popups(page)
                 return True
-            # клики не берут — ОБНОВЛЯЕМ страницу (обычное
+            # клики не берут - ОБНОВЛЯЕМ страницу (обычное
             # обновление снимает блок), затем снова «Продолжить»
             if allow_reload and attempt in (2, 4):
                 reloads += 1
-                LOG("блок держится — обновляю страницу (F5 №%d)" % reloads)
+                LOG("блок держится - обновляю страницу (F5 №%d)" % reloads)
                 try:
                     page.reload(timeout=45000)
                     pause(3, 5)
                 except Exception:
                     pass
-        LOG("!!! блок НЕ снялся за 5 попыток (клики + F5) — страницу "
+        LOG("!!! блок НЕ снялся за 5 попыток (клики + F5) - страницу "
             "останавливаю (cooldown %d мин)" % (_BLOCK_COOLDOWN // 60))
         _BLOCK_HARD["ts"] = time.time()
         return False
@@ -772,7 +772,7 @@ def load_done_ids() -> set:
 
     Считаем просмотренными: с телефоном в БД и со статусами
     no_phone/error/dup_title (чтобы плановые прогоны не тыкали их
-    заново). login_required НЕ считаем — вход есть, надо добрать.
+    заново). login_required НЕ считаем - вход есть, надо добрать.
     """
     ids = set()
     try:
@@ -786,7 +786,7 @@ def load_done_ids() -> set:
                       AND phone_status NOT IN ('', 'login_required'))"""
         ).fetchall()
         db.con.close()
-        # id в базе может лежать строкой (старые строки) — нормализуем
+        # id в базе может лежать строкой (старые строки) - нормализуем
         ids = {int(r[0]) for r in rows if r[0] is not None
                and str(r[0]).isdigit()}
     except Exception as e:
@@ -797,7 +797,7 @@ def load_done_ids() -> set:
 def load_need_descr() -> set:
     """ID объявлений категории без описания (сниппета) в БД.
 
-    Бэкfill: карточки монтируются при любом проходе — сниппет
+    Бэкfill: карточки монтируются при любом проходе - сниппет
     дописывается «попутно», без отдельного обхода.
     """
     ids = set()
@@ -843,7 +843,7 @@ def save_descriptions(updates: dict) -> int:
 def load_db_titles() -> set:
     """Нормализованные описания, для которых телефон уже собран.
 
-    Плюс описания-клоны (dup_title) — их тоже не тыкаем повторно.
+    Плюс описания-клоны (dup_title) - их тоже не тыкаем повторно.
     """
     titles = set()
     try:
@@ -872,14 +872,14 @@ def collect_ad_links(page, dump_markers: bool = False) -> list:
     """Смонтированные сейчас объявления, СОРТИРОВКА ПО ПОЗИЦИИ.
 
     DOM у Авито виртуализированный: при обратной прокрутке карточки
-    перемонтируются и_APPENDятся в конец DOM — порядок DOM ≠ порядок
+    перемонтируются и_APPENDятся в конец DOM - порядок DOM ≠ порядок
     на экране. Поэтому берём вертикальную координату каждой карточки
     (rect.top + scrollY) и сортируем по ней: обход строго сверху вниз.
 
     Заодно читаем СНИППЕТ карточки (серые строки условий/обязанностей
-    под зарплатой — «Описание» в экселе) — без ховера, из того же
+    под зарплатой - «Описание» в экселе) - без ховера, из того же
     JS-прохода, бесплатно; идёт на бэкfill описаний в БД.
-    dump_markers=True — один раз залогировать все data-marker первой
+    dump_markers=True - один раз залогировать все data-marker первой
     карточки (самодиагностика разметки).
     """
     ads = []
@@ -1006,7 +1006,7 @@ def page_pos(page) -> dict:
     """Позиция прокрутки с учётом контейнера списка: {y, vh, h, mode}.
 
     Если список живёт в своём overflow-контейнере, window.scrollY
-    всегда 0 — берём scrollTop/высоты контейнера. При сбое — «мы
+    всегда 0 - берём scrollTop/высоты контейнера. При сбое - «мы
     вверху бесконечной страницы» (низ не сработает ложно)."""
     try:
         return page.evaluate(
@@ -1041,7 +1041,7 @@ def page_pos(page) -> dict:
 
 def scroll_down(page, dy: int) -> None:
     """Прокрутить страницу вниз (колесо над центром списка; надёжный
-    фолбэк — JS-прокрутка контейнера списка / window)."""
+    фолбэк - JS-прокрутка контейнера списка / window)."""
     try:
         before = page_pos(page)["y"]
         page.mouse.move(640, 400)          # центр списка, не левый край
@@ -1082,7 +1082,7 @@ def scroll_top(page) -> None:
 def scroll_to_bottom(page, max_steps: int = 50) -> bool:
     """Докрутить страницу до низа (для пагинации внизу SERP).
 
-    Проверяет флаг мягкой остановки на каждом шаге — кнопка
+    Проверяет флаг мягкой остановки на каждом шаге - кнопка
     «Остановить» не ждёт долгого доскролла."""
     for _ in range(max_steps):
         if _STOP["flag"]:
@@ -1096,8 +1096,8 @@ def scroll_to_bottom(page, max_steps: int = 50) -> bool:
 
 
 def click_show_more(page) -> bool:
-    """Кнопка «Показать ещё» — только НИЖЕ вьюпорта в основном столбце
-    (кнопки-омонимы в сайдбаре/попапах не трогаем). True — если кликнули."""
+    """Кнопка «Показать ещё» - только НИЖЕ вьюпорта в основном столбце
+    (кнопки-омонимы в сайдбаре/попапах не трогаем). True - если кликнули."""
     try:
         clicked = page.evaluate(
             """() => {
@@ -1126,7 +1126,7 @@ def click_show_more(page) -> bool:
                     const absY = r.top + (sc ? sc.scrollTop
                                              : window.scrollY);
                     if (r.width < 200) continue;       // мелочь в сайдбаре
-                    if (absY < top + vh * 0.5) continue;  // выше — не то
+                    if (absY < top + vh * 0.5) continue;  // выше - не то
                     b.click();
                     return t;
                 }
@@ -1134,7 +1134,7 @@ def click_show_more(page) -> bool:
             }""")
         if clicked:
             time.sleep(1.2)
-            LOG("клик «%s» — догружаю" % clicked)
+            LOG("клик «%s» - догружаю" % clicked)
             return True
     except Exception:
         pass
@@ -1168,10 +1168,10 @@ def locate_card(page, ad_id: int):
 
 
 def try_phone_from_card(page, card, i: int) -> str | None:
-    """Hover → «Показать телефон» → картинка/текст → номер.
+    """Hover -> «Показать телефон» -> картинка/текст -> номер.
 
     OCR-кэш: у клонов одного рекрутёра картинка-номер байт-в-байт
-    одинаковая — распознаём один раз, дальше берём из кэша.
+    одинаковая - распознаём один раз, дальше берём из кэша.
     """
     hide_old_phone_imgs(page)
     try:
@@ -1182,7 +1182,7 @@ def try_phone_from_card(page, card, i: int) -> str | None:
         card.hover(timeout=5000)
     except Exception as e:
         # ховеру мешает мягкий блок «Доступ ограничен» (модалка
-        # поверх списка) или чужая вкладка — снимаем и пробуем снова
+        # поверх списка) или чужая вкладка - снимаем и пробуем снова
         if not dismiss_block(page):
             return "BLOCKED"
         close_foreign_tabs(page)
@@ -1235,7 +1235,7 @@ def try_phone_from_card(page, card, i: int) -> str | None:
         LOG("item[%d]: клик кнопки fail %s" % (i, str(e)[:50]))
         return None
     pause(2.3, 3.0)
-    # 1) номер картинкой (с md5-кэшем — клоны не гоняем через OCR)
+    # 1) номер картинкой (с md5-кэшем - клоны не гоняем через OCR)
     try:
         imgs = page.locator("img[data-marker*='phone']")
         for j in range(imgs.count()):
@@ -1311,13 +1311,13 @@ def save_to_db(rows: list, write_runs: bool = True,
                category: str = TAG_CATEGORY) -> dict:
     """rows: [{id,title,url,price,location,phone}] -> статистика.
 
-    dup_rows — клоны (описание уже встречалось): пишутся БЕЗ номера
+    dup_rows - клоны (описание уже встречалось): пишутся БЕЗ номера
     со статусом dup_title (следующий прогон пропустит и их).
-    no_rows — карточки БЕЗ кнопки телефона: статус no_phone —
+    no_rows - карточки БЕЗ кнопки телефона: статус no_phone -
     следующий прогон их не тыкает заново (ускорение повторов).
-    category — тег источника в БД (категория «Военный» / поиск).
-    write_runs=False — промежуточное сохранение (сразу после
-    очередного номера); строка в runs одна на прогон — в финале.
+    category - тег источника в БД (категория «Военный» / поиск).
+    write_runs=False - промежуточное сохранение (сразу после
+    очередного номера); строка в runs одна на прогон - в финале.
     """
     out = {"new": 0, "old": 0, "saved": 0}
     if not rows and not dup_rows and not no_rows:
@@ -1413,8 +1413,8 @@ def new_state() -> dict:
 
 
 def st_line(st: dict, page_no: int) -> str:
-    return ("страница %d · просмотрено %d · номеров %d · клонов "
-            "пропущено %d · без телефона %d"
+    return ("страница %d | просмотрено %d | номеров %d | клонов "
+            "пропущено %d | без телефона %d"
             % (page_no, st["scanned"], len(st["seen_phones"]),
                st["dups"], st["no_phone"]))
 
@@ -1422,7 +1422,7 @@ def st_line(st: dict, page_no: int) -> str:
 def flush_state(st: dict, final: bool = False, pages: int = 1) -> None:
     """Сохранить в БД ещё не сохраненное (авария не теряет данные).
 
-    final=True — со строкой runs (одна на прогон, в финале).
+    final=True - со строкой runs (одна на прогон, в финале).
     """
     unsaved = st["rows"][st["saved_idx"]:]
     unsaved_dups = st["dup_rows"][st["saved_dup_idx"]:]
@@ -1451,11 +1451,11 @@ def flush_state(st: dict, final: bool = False, pages: int = 1) -> None:
 
 def process_ad(page, st: dict, ad: dict, idx: int, total: int,
                page_no: int) -> None:
-    """Одна карточка: дедуп по описанию → hover → телефон."""
+    """Одна карточка: дедуп по описанию -> hover -> телефон."""
     ad_id = ad["id"]
     nt = norm_title(ad["title"])
     # ДЕДУП ПО ОПИСАНИЮ: уже встречалось (в прогоне или в базе с
-    # номером) → телефон не собираем вовсе, карточку пропускаем
+    # номером) -> телефон не собираем вовсе, карточку пропускаем
     if nt and (nt in st["seen_titles"] or nt in st["db_titles"]):
         st["done_ids"].add(ad_id)
         st["dups"] += 1
@@ -1464,24 +1464,24 @@ def process_ad(page, st: dict, ad: dict, idx: int, total: int,
             "url": ad["url"], "price": "", "location": "",
         })
         if st["dups"] <= 5 or st["dups"] % 15 == 0:
-            LOG("№%d/%d · стр.%d: КЛОН — описание уже встречалось, "
+            LOG("№%d/%d | стр.%d: КЛОН - описание уже встречалось, "
                 "телефон не собираем: %s"
                 % (idx, total, page_no, (ad["title"] or "")[:60]))
-        # клоны пишем в БД пачками — следующий прогон их пропустит
+        # клоны пишем в БД пачками - следующий прогон их пропустит
         if len(st["dup_rows"]) - st["saved_dup_idx"] >= 25:
             flush_state(st)
         return
     card = locate_card(page, ad_id)
     if card is None:
         st["done_ids"].add(ad_id)
-        LOG("№%d/%d · стр.%d: карточка не найдена — пропуск"
+        LOG("№%d/%d | стр.%d: карточка не найдена - пропуск"
             % (idx, total, page_no))
         return
-    LOG("№%d/%d · стр.%d: %s"
+    LOG("№%d/%d | стр.%d: %s"
         % (idx, total, page_no, (ad["title"] or "")[:70]))
     ph = try_phone_from_card(page, card, ad_id)
     if ph in ("HOVER_FAIL", "BLOCKED"):
-        # ховеру мешал блок/оверлей — в БД НЕ пишем (не no_phone!),
+        # ховеру мешал блок/оверлей - в БД НЕ пишем (не no_phone!),
         # карточку в этом прогоне пропускаем, следующий попробует
         st["done_ids"].add(ad_id)
         st["hover_fails"] = st.get("hover_fails", 0) + 1
@@ -1495,7 +1495,7 @@ def process_ad(page, st: dict, ad: dict, idx: int, total: int,
         st["seen_titles"].add(nt)
     if not ph:
         st["no_phone"] += 1
-        # фиксируем «без телефона» в БД — следующий прогон
+        # фиксируем «без телефона» в БД - следующий прогон
         # не тыкает эту карточку заново (ускорение повторов)
         st["no_rows"].append({
             "id": ad_id, "title": ad["title"] or "",
@@ -1519,7 +1519,7 @@ def process_ad(page, st: dict, ad: dict, idx: int, total: int,
             % (len(st["seen_phones"]), ph, idx, total,
                (d["title"] or "")[:50]))
         pause(2.5, 4.5)
-        # КАЖДЫЙ номер пишется в БД СРАЗУ — база растёт по ходу
+        # КАЖДЫЙ номер пишется в БД СРАЗУ - база растёт по ходу
         # сбора, а не по окончанию парсера (краш/закрытие не теряет)
         flush_state(st)
     else:
@@ -1537,7 +1537,7 @@ def harvest_page(page, st: dict, deadline: float,
     прокрутки, при обратной прокрутке карточки перемонтируются не
     по порядку. Поэтому каждый круг берём смонтированные карточки,
     СОРТИРУЕМ ПО ВЕРТИКАЛЬНОЙ ПОЗИЦИИ и обрабатываем непросмотрен-
-    ные строго по порядку; затем докручиваем вниз — Авито догрузит
+    ные строго по порядку; затем докручиваем вниз - Авито догрузит
     следующую порцию. Порядок обхода = порядок на экране.
     Возврат: done/limit/cards_limit/time/stopped/stuck.
     """
@@ -1550,10 +1550,10 @@ def harvest_page(page, st: dict, deadline: float,
         if _STOP["flag"]:
             return "stopped"
         if time.time() - _BLOCK_HARD["ts"] < _BLOCK_COOLDOWN:
-            return "blocked"     # жёсткий блок — страницу останавливаем
+            return "blocked"     # жёсткий блок - страницу останавливаем
         rounds += 1
         # реклама открывает чужие вкладки (yoomoney и пр.) и
-        # крадёт фокус — держим только вкладки Авито, нашу — спереди
+        # крадёт фокус - держим только вкладки Авито, нашу - спереди
         close_foreign_tabs(page)
         # 1) смонтированные карточки ПО ПОЗИЦИИ на экране
         ads = collect_ad_links(page, dump_markers=(rounds == 1))
@@ -1563,12 +1563,12 @@ def harvest_page(page, st: dict, deadline: float,
             st["all_ids"].add(a["id"])
             if a["id"] not in st["done_ids"]:
                 new_ads.append(a)
-            # бэкfill: у карточки из БД пусто описание — запомним
+            # бэкfill: у карточки из БД пусто описание - запомним
             # сниппет (запись партиями в flush_state)
             if a["id"] in st["need_descr"] and a.get("snippet"):
                 st["descr_updates"][a["id"]] = a["snippet"]
                 st["need_descr"].discard(a["id"])
-        # 2) обработать непросмотренные — строго по порядку
+        # 2) обработать непросмотренные - строго по порядку
         scanned_before = st["scanned"]
         if new_ads:
             no_progress = 0
@@ -1584,17 +1584,17 @@ def harvest_page(page, st: dict, deadline: float,
                 seq += 1
                 process_ad(page, st, ad, seq, max(total_now, seq),
                            page_no)
-        # 3) позиция/прогресс: ключ включает и позицию прокрутки —
+        # 3) позиция/прогресс: ключ включает и позицию прокрутки -
         # «застоем» считается только когда НЕ двигается ВООБЩЕ
         # (позиция стоит на месте и новых карточек нет); движение по
         # уже обработанной зоне застоями не считается (там до 15к px)
         pos = page_pos(page)
         key = (len(st["all_ids"]), pos["h"], pos["y"])
         at_bottom = pos["y"] + pos["vh"] >= pos["h"] - 500
-        # 4) докрутить вниз — Авито догрузит следующую порцию.
+        # 4) докрутить вниз - Авито догрузит следующую порцию.
         #    круг прошёл БЕЗ hover (все карточки известные или
-        #    клоны) — БЫСТРАЯ прокрутка: крупнее шаг, короче пауза;
-        #    появилась живая карточка — обычный «человеческий» темп
+        #    клоны) - БЫСТРАЯ прокрутка: крупнее шаг, короче пауза;
+        #    появилась живая карточка - обычный «человеческий» темп
         if st["scanned"] > scanned_before:
             scroll_down(page, random.randint(700, 1100))
             pause(0.7, 1.5)
@@ -1602,7 +1602,7 @@ def harvest_page(page, st: dict, deadline: float,
             scroll_down(page, random.randint(1500, 1900))
             pause(0.25, 0.5)
         # 5) страница кончилась? (внизу и новых карточек нет;
-        # последний шанс — кнопка «Показать ещё» ниже вьюпорта)
+        # последний шанс - кнопка «Показать ещё» ниже вьюпорта)
         if key == prev_key:
             no_progress += 1
         else:
@@ -1613,7 +1613,7 @@ def harvest_page(page, st: dict, deadline: float,
                 % (st_line(st, page_no),
                    "да" if at_bottom else "нет", pos["h"],
                    pos.get("mode", "?")))
-            # мягкий блок мог выскочить прямо во время обхода —
+            # мягкий блок мог выскочить прямо во время обхода -
             # модалка «Доступ ограничен» перекрывает список
             if not dismiss_block(page):
                 return "blocked"
@@ -1625,7 +1625,7 @@ def harvest_page(page, st: dict, deadline: float,
                 % (page_no, len(st["all_ids"]), st["scanned"]))
             return "done"
         if no_progress >= 12:
-            LOG("!!! список не двигается 12 кругов — доскролл до низа "
+            LOG("!!! список не двигается 12 кругов - доскролл до низа "
                 "и проверю пагинацию")
             scroll_to_bottom(page)
             return "done" if click_show_more(page) else "stuck"
@@ -1639,7 +1639,7 @@ def harvest_page(page, st: dict, deadline: float,
 def goto_next_page(page, page_no: int) -> bool:
     """Клик «Следующая страница» в пагинации внизу SERP.
 
-    Пагинация монтируется только у низа страницы (виртуализация) —
+    Пагинация монтируется только у низа страницы (виртуализация) -
     сначала доскролл до низа, потом ищем кнопку."""
     def _find():
         for sel in ("[data-marker='pagination-button-next']",
@@ -1669,11 +1669,11 @@ def goto_next_page(page, page_no: int) -> bool:
 
     loc = _find()
     if loc is None:
-        LOG("пагинация не смонтирована — доскролл до низа")
+        LOG("пагинация не смонтирована - доскролл до низа")
         scroll_to_bottom(page)
         loc = _find()
     if loc is None:
-        LOG("страница %d: «Следующая» не найдена — категория вся" % page_no)
+        LOG("страница %d: «Следующая» не найдена - категория вся" % page_no)
         return False
     try:
         try:
@@ -1682,7 +1682,7 @@ def goto_next_page(page, page_no: int) -> bool:
             pass
         loc.click(timeout=5000)
     except Exception as e:
-        LOG("клик «Следующая» fail (%s) — JS-клик" % str(e)[:50])
+        LOG("клик «Следующая» fail (%s) - JS-клик" % str(e)[:50])
         try:
             loc.evaluate("el => el.click()")
         except Exception as e2:
@@ -1713,8 +1713,8 @@ def main() -> int:
                     help="бюджет прогона, сек (по умолчанию 25 мин)")
     ap.add_argument("--mode", choices=("category", "search"),
                     default="category",
-                    help="category — через категорию «Военный»; "
-                         "search — через строку поиска Авито")
+                    help="category - через категорию «Военный»; "
+                         "search - через строку поиска Авито")
     ap.add_argument("--query", default=SEARCH_QUERY_DEFAULT,
                     help="текст запроса (для --mode search)")
     ap.add_argument("--category-tag", default="",
@@ -1778,7 +1778,7 @@ def main() -> int:
             ctx = launch(pw)
             if not add_session_cookies(ctx):
                 result["stop_reason"] = "no_session"
-                LOG("!!! нет сессии — сначала вход юзера в Firefox")
+                LOG("!!! нет сессии - сначала вход юзера в Firefox")
                 ctx.close()
                 return _finish(result)
             page = ctx.pages[0] if ctx.pages else ctx.new_page()
@@ -1789,7 +1789,7 @@ def main() -> int:
                         result["stop_reason"] = "no_serp"
                         return _finish(result)
                 else:
-                    # 1. Главная → Работа
+                    # 1. Главная -> Работа
                     if not step_home_to_rabota(page):
                         result["stop_reason"] = "no_serp"
                         return _finish(result)
@@ -1798,7 +1798,7 @@ def main() -> int:
                         result["stop_reason"] = "no_category"
                         return _finish(result)
                 # 3. Галочка «Сначала из Москвы и МО» (на поиске её
-                # может не быть — регион уже в URL, это не ошибка)
+                # может не быть - регион уже в URL, это не ошибка)
                 step_toggle_moscow_first(page)
                 # 4. Сортировка «По дате»
                 step_sort_by_date(page)
@@ -1808,15 +1808,15 @@ def main() -> int:
                 done_ids = load_done_ids()
                 if done_ids:
                     LOG("уже просмотрено раньше (телефон/клон/нет "
-                        "телефона): %d — пропустим" % len(done_ids))
+                        "телефона): %d - пропустим" % len(done_ids))
                 st["done_ids"] |= done_ids
                 st["db_titles"] = load_db_titles()
                 if st["db_titles"]:
-                    LOG("описаний с номером в базе: %d — их клоны "
+                    LOG("описаний с номером в базе: %d - их клоны "
                         "пропустим" % len(st["db_titles"]))
                 st["need_descr"] = load_need_descr()
                 if st["need_descr"]:
-                    LOG("строк без описания в базе: %d — допишем "
+                    LOG("строк без описания в базе: %d - допишем "
                         "сниппеты попутно" % len(st["need_descr"]))
                 LOG("=== СБОР (%s) ПО ПОРЯДКУ: бюджет %d сек, "
                     "лимит номеров: %s, тег БД: %s ==="
@@ -1879,7 +1879,7 @@ def main() -> int:
             finally:
                 try:
                     # прокрученная сессия (Авито ротирует куки при
-                    # активности) — сохраняем, чтобы не устарела
+                    # активности) - сохраняем, чтобы не устарела
                     ctx.storage_state(path=str(SESSION_FILE))
                     LOG("сессия обновлена и сохранена -> %s" % SESSION_FILE)
                 except Exception:

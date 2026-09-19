@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-avito_cards.py — модуль карточек объявлений: продавец + телефон.
+avito_cards.py - модуль карточек объявлений: продавец + телефон.
 
-process_card() открывает карточку, собирает продавца (имя/тип/счётчики —
+process_card() открывает карточку, собирает продавца (имя/тип/счётчики -
 для «Вакансий компании») и, если want_phone, жмёт «Позвонить» и читает
 номер (текстом или OCR с картинки-попапа). Звонки никогда не
 совершаются: внутри попапа ничего не кликается.
 
-Анонимный Авито номера не отдаёт -> status='login_required' — это
+Анонимный Авито номера не отдаёт -> status='login_required' - это
 ОЖИДАЕМОЕ чистое состояние, не ошибка (номера появятся после /войти).
 """
 
@@ -55,7 +55,7 @@ PHONE_RE = re.compile(
 #: селектор картинки с номером в попапе
 PHONE_IMG_SELECTOR = "img[data-marker='phone-popup/phone-image']"
 
-#: максимум телефонов за один сбор (сессию) — env юнита (20 на сервере)
+#: максимум телефонов за один сбор (сессию) - env юнита (20 на сервере)
 MAX_PHONES_PER_SESSION = int(
     os.environ.get("AVITO_MAX_PHONES", "5") or 5)
 
@@ -80,7 +80,7 @@ def _norm_phone(s: str):
 #
 # В попапе после клика «Позвонить» номер приходит как
 # <img data-marker="phone-popup/phone-image" src="data:image/png;base64,...">
-# — текстом его не скопировать. Читаем tesseract-ом (проверено на живом
+# - текстом его не скопировать. Читаем tesseract-ом (проверено на живом
 # попапе: scale=3, thresh=150 распознаёт номер безошибочно).
 
 
@@ -110,7 +110,7 @@ def ocr_phone_image(png_bytes: bytes):
 
     Прогоняет комбинации (scale, thresh), возвращает первый валидный
     +7XXXXXXXXXX или None. Проверено на реальном номере
-    «8 958 603-97-02»: (3,150) читает верно, остальные — запасные.
+    «8 958 603-97-02»: (3,150) читает верно, остальные - запасные.
     """
     if not _TESSERACT or not png_bytes:
         return None
@@ -153,7 +153,7 @@ def get_phone(page, verbose: bool = False):
 
     Returns (status, phone) with status in:
       'ok'             - phone extracted (text in the popup OR OCR of the
-                         popup image — Avito renders numbers as PNG) and
+                         popup image - Avito renders numbers as PNG) and
                          normalized to +7XXXXXXXXXX. No call is ever
                          placed: nothing inside the popup is clicked.
       'login_required' - auth wall / login redirect or silent no-op while
@@ -210,7 +210,7 @@ def get_phone(page, verbose: bool = False):
     deadline = time.time() + 6.0
     while time.time() < deadline:
         # 4a. номер КАРТИНКОЙ: img[data-marker='phone-popup/phone-image']
-        #     (data:image/png;base64). Внутри попапа ничего не кликаем —
+        #     (data:image/png;base64). Внутри попапа ничего не кликаем -
         #     звонок не инициируется, только читаем картинку и закрываем.
         try:
             loc = page.locator(PHONE_IMG_SELECTOR)
@@ -363,8 +363,8 @@ def process_card(context, ad: dict, db, verbose: bool = False,
     save session when a phone was obtained -> close page.
 
     want_phone=False: карточка открывается ТОЛЬКО ради продавца
-    (имя/тип/счётчики — для счётчика вакансий компании); «Позвонить»
-    не жмём, phone_status в БД НЕ пишем — объявление остаётся в
+    (имя/тип/счётчики - для счётчика вакансий компании); «Позвонить»
+    не жмём, phone_status в БД НЕ пишем - объявление остаётся в
     очереди pending и телефон будет запрошен позже (когда лимит
     сессии позволит / после входа).
 
@@ -412,10 +412,10 @@ def process_card(context, ad: dict, db, verbose: bool = False,
         result["class"] = c
         if c not in ("items", "empty"):
             # страница НЕ карточка (блок/капча не снялись, пустая
-            # навигация): ничего не скрепим и НЕ пишем статус в БД —
+            # навигация): ничего не скрепим и НЕ пишем статус в БД -
             # иначе живое объявление получит фиктивный no_button и
-            # выпадет из очереди навсегда. Останется pending → ретрай.
-            log("card %s: класс %s — карточка не загрузилась, статус "
+            # выпадет из очереди навсегда. Останется pending -> ретрай.
+            log("card %s: класс %s - карточка не загрузилась, статус "
                 "не пишу (будет ретрай)" % (ad.get("id"), c))
             return result
 
@@ -433,7 +433,7 @@ def process_card(context, ad: dict, db, verbose: bool = False,
             detect_login_state(page)
         else:
             # лимит телефонов исчерпан: продавца собрали, телефон
-            # не запрашивали — статус в БД НЕ пишем (останется pending)
+            # не запрашивали - статус в БД НЕ пишем (останется pending)
             result["status"] = "skipped_phone"
 
         # seller-пишем ТОЛЬКО реально собранные значения: NULL-ами

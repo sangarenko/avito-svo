@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-avito_nav.py — модуль навигации: smart_goto с анти-блоком.
+avito_nav.py - модуль навигации: smart_goto с анти-блоком.
 
 goto() с классификацией результата и лечением помех:
     BLOCK («Доступ ограничен»)  -> кнопка «Продолжить» -> капча -> solve;
@@ -9,7 +9,7 @@ goto() с классификацией результата и лечением 
     иначе                       -> бэкофф 10-20 с и повтор (до tries).
 
 Возвращает класс итогового состояния страницы ('items' / 'block' /
-'captcha' / 'empty' / 'unknown') — вызывающий решает, что делать.
+'captcha' / 'empty' / 'unknown') - вызывающий решает, что делать.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def smart_goto(page, url: str, tries: int = 2) -> str:
         if c == "block" and click_block_continue(page):
             human_pause(1, 2)
             # the captcha widget renders on top of the block text with
-            # a delay — wait for it before re-classifying
+            # a delay - wait for it before re-classifying
             try:
                 page.wait_for_selector(
                     ".geetest_btn, .geetest_box, .geetest_wrap",

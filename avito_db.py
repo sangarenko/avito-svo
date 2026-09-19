@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-avito_db.py — модуль базы данных (SQLite): ads / sellers / runs.
+avito_db.py - модуль базы данных (SQLite): ads / sellers / runs.
 
 Схема толерантная: базовые таблицы CREATE IF NOT EXISTS, недостающие
-колонки добавляются ALTER'ом с игнором «duplicate column» — тот же код
+колонки добавляются ALTER'ом с игнором «duplicate column» - тот же код
 работает и с легаси-базой сервера, и с чистой. drop_auto() вычищает
 авто-мусор, случайно накопившийся до внедрения фильтра.
 """
@@ -28,7 +28,7 @@ ADS_EXTRA = [
     ("seller_reviews", "INTEGER"),
     ("seller_avito_ads", "INTEGER"),
     ("is_mass", "INTEGER DEFAULT 0"),
-    # сниппет карточки SERP (серые строки условий) — «Описание» в экселе
+    # сниппет карточки SERP (серые строки условий) - «Описание» в экселе
     ("description", "TEXT"),
 ]
 
@@ -124,7 +124,7 @@ class DB:
         s_cols = self._introspect("sellers")
         if s_cols and "name" not in s_cols:
             try:
-                log("sellers: legacy schema (%s) — rebuilding from ads"
+                log("sellers: legacy schema (%s) - rebuilding from ads"
                     % ",".join(s_cols[:5]))
                 self.con.execute("DROP TABLE sellers")
                 self.con.execute(
@@ -243,9 +243,9 @@ class DB:
         """Удалить из `ads` транспортный мусор; вернуть число удалённых.
 
         Чистит объявления, похожие на машины/запчасти/водительские вакансии
-        (looks_like_auto) — защиту «даже если в БД осталось» от мусора,
+        (looks_like_auto) - защиту «даже если в БД осталось» от мусора,
         накопившегося до внедрения фильтра. Если колонки category в старой
-        схеме нет — читаем без неё. Ничего не добавляет, только удаляет.
+        схеме нет - читаем без неё. Ничего не добавляет, только удаляет.
         """
         try:
             if "category" in self.cols:
@@ -300,7 +300,7 @@ class DB:
 
         A seller is marked is_mass when they have >= 5 ads in the DB;
         the same flag is then written back onto the ads rows.
-        Атомарно: при ошибке любого шага — rollback, чтобы частичный
+        Атомарно: при ошибке любого шага - rollback, чтобы частичный
         DELETE («sellers пустые») никогда не коммитился наружу.
         """
         try:

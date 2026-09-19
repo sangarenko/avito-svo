@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-avito_common.py — общие константы и маленькие хелперы парсера Авито.
+avito_common.py - общие константы и маленькие хелперы парсера Авито.
 
 Модульная структура парсера:
-    avito_common   — пути, логирование, паузы, время МСК      (этот файл)
-    avito_geo      — город/регион: URL поиска, вкладки, канонизация
-    avito_filter   — авто-мусор: фильтр объявлений + запрет вкладок
-    avito_db       — SQLite: ads / sellers / runs
-    avito_browser  — Chromium-контексты, сессия, прокси
-    avito_classify — классификация страниц (items/block/captcha/empty)
-    avito_captcha  — GeeTest v4 слайдер-солвер
-    avito_extract  — выдача SERP: items + вкладки категорий
-    avito_cards    — карточки: продавец + телефон (OCR)
-    avito_nav      — smart_goto навигация с анти-блоком
-    avito_lib      — совместимый шим: реэкспорт всего старого API
+    avito_common   - пути, логирование, паузы, время МСК      (этот файл)
+    avito_geo      - город/регион: URL поиска, вкладки, канонизация
+    avito_filter   - авто-мусор: фильтр объявлений + запрет вкладок
+    avito_db       - SQLite: ads / sellers / runs
+    avito_browser  - Chromium-контексты, сессия, прокси
+    avito_classify - классификация страниц (items/block/captcha/empty)
+    avito_captcha  - GeeTest v4 слайдер-солвер
+    avito_extract  - выдача SERP: items + вкладки категорий
+    avito_cards    - карточки: продавец + телефон (OCR)
+    avito_nav      - smart_goto навигация с анти-блоком
+    avito_lib      - совместимый шим: реэкспорт всего старого API
 
 Зависимости: только stdlib. numpy/Pillow/playwright живут в своих
 модулях, чтобы этот импортировался где угодно.
@@ -87,7 +87,7 @@ def msk_now() -> datetime:
     """Current time in the Europe/Moscow timezone (naive local fallback)."""
     if _MSK is not None:
         return datetime.now(_MSK)
-    # fallback: сервер без tzdata живёт в UTC — даём хотя бы верное
+    # fallback: сервер без tzdata живёт в UTC - даём хотя бы верное
     # московское время, чтобы first_seen-строки не расходились на 3 часа
     return datetime.utcnow() + timedelta(hours=3)  # pragma: no cover
 
@@ -115,7 +115,7 @@ def human_pause(a: float, b: float) -> None:
 def log(msg: str) -> None:
     """Print '[YYYY-MM-DD HH:MM:SS] msg' to stdout, unbuffered.
 
-    Строка также дописывается в PARSER_LOG — живой прогресс сбора
+    Строка также дописывается в PARSER_LOG - живой прогресс сбора
     оттуда читает веб-форма (tail). Сбой записи молча игнорируется.
     """
     line = "[%s] %s" % (msk_now().strftime("%Y-%m-%d %H:%M:%S"), msg)

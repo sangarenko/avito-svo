@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-avito_lib.py — совместимый шим над модульной структурой.
+avito_lib.py - совместимый шим над модульной структурой.
 
 Библиотека разбита на модули:
 
-    avito_common   — пути, логирование, паузы, время МСК
-    avito_geo      — город/регион: URL поиска, вкладки, канонизация
-    avito_filter   — авто-мусор: фильтр объявлений + запрет вкладок
-    avito_db       — SQLite: ads / sellers / runs
-    avito_browser  — Chromium-контексты, сессия, прокси
-    avito_classify — классификация страниц (items/block/captcha/empty)
-    avito_captcha  — GeeTest v4 слайдер-солвер
-    avito_extract  — выдача SERP: items + вкладки категорий
-    avito_cards    — карточки: продавец + телефон (OCR)
-    avito_nav      — smart_goto навигация с анти-блоком
+    avito_common   - пути, логирование, паузы, время МСК
+    avito_geo      - город/регион: URL поиска, вкладки, канонизация
+    avito_filter   - авто-мусор: фильтр объявлений + запрет вкладок
+    avito_db       - SQLite: ads / sellers / runs
+    avito_browser  - Chromium-контексты, сессия, прокси
+    avito_classify - классификация страниц (items/block/captcha/empty)
+    avito_captcha  - GeeTest v4 слайдер-солвер
+    avito_extract  - выдача SERP: items + вкладки категорий
+    avito_cards    - карточки: продавец + телефон (OCR)
+    avito_nav      - smart_goto навигация с анти-блоком
 
 Этот файл НЕ содержит логики: он реэкспортирует прежнее API, чтобы
 excel_report.py и старые импорты продолжали работать без правок.
